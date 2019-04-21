@@ -21,13 +21,19 @@ getEverySnd :: [[String]] -> [String]
 getEverySnd strlst = [x2 | x1:x2:xs <- strlst]
 
 getClasses :: Program -> [String]
-getClasses (Program prog) = getEverySnd (Map.findWithDefault [[]] "Cls" prog)
+getClasses (Program prog) = getEverySnd listClasses
+    where listClasses = Map.findWithDefault [[]] "Cls" prog
 
 getParentClass :: String -> Program -> String
-getParentClass clsname (Program prog) = head [x1 | x1:x2:xs <- (Map.findWithDefault [[]] "Cls" prog), x2 == clsname]
+getParentClass clsname (Program prog) = head [x1 | x1:x2:xs <- listClasses, x2 == clsname]
+    where listClasses = Map.findWithDefault [[]] "Cls" prog
 
 getFuncsForClass :: String -> Program -> [[String]]
-getFuncsForClass = undefined
+getFuncsForClass clsname (Program prog)
+    | funcList == [[]] = []
+    | otherwise = funcList
+    where listClasses = Map.findWithDefault [[]] "Cls" prog
+          funcList = [xs | x1:x2:xs <- listClasses, x2 ==  clsname]
 
 -- Instruction poate fi ce considerați voi
 data Instruction = Instruction
