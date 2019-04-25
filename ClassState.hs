@@ -1,3 +1,7 @@
+-------------------------------------------------
+-- Diaconescu Florin, 322CB, florin.diaconescu --
+-------------------------------------------------
+
 module ClassState
 where
 
@@ -17,4 +21,4 @@ insertIntoClass :: ClassState -> InstrType -> [String] -> ClassState
 insertIntoClass (ClassState cl) instr strl = ClassState (Map.insertWith (++) (show instr) [strl] cl)
 
 getValues :: ClassState -> InstrType -> [[String]]
-getValues (ClassState cl) instr = Map.findWithDefault [[]] (show instr) cl
+getValues (ClassState cl) instr = Map.findWithDefault [] (show instr) cl

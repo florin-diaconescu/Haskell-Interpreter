@@ -1,0 +1,126 @@
+-------------------------------------------------
+-- Diaconescu Florin, 322CB, florin.diaconescu --
+-------------------------------------------------
+
+---------------------------INTERPRETOR HASKELL---------------------------------
+
+Tema presupune implementarea unui interpretor care face sinteza de tip pentru
+un limbaj simplist.
+
+Implementarea temei a pornit de la ideea de a folosi Data.Map ca structura de
+baza, pentru modelarea facila a ClassState-ului, cat si a Program-ului.
+
+----- (A) -----
+La punctul a), ClassState reprezinta o mapare intre un String (simbolizat de,
+fie "Var", fie "Func"), folosit drept cheie, si o lista de lista de String-uri,
+ce este folosita pentru a obtine valorile necesare. Astfel, cand initializez
+o clasa goala, voi introduce succesiv in Map.empty un element cu cheia "Func"
+si o lista goala, apoi, analog, altul cu cheia "Var" si o lista goala.
+
+Inserarea intr-o clasa se face apeland functia Map.insertWith, cu functia (++),
+folosindu-ma de show, pentru a converti tipul instructiunii intr-un string,
+practic lipind un element (lista de parametri) la celelalte de acelasi tip,
+pe baza cheii. Astfel, obtinerea valorilor va fi banala, apeland doar functia
+Map.findWithDefault, cu parametrii lista goala (valoarea default), show pe
+instructiune (pentru a localiza cheia) si clasa.
+
+----- (B) -----
+
+La punctul b), am folosit, pentru definitia programului, o mapare analoaga
+ClassState-ului, de data aceasta avand insa trei tipuri de chei, si anume
+"Var" (corespunzator variabilelor), "Cls" (corespunzator claselor) si "Func",
+corespunzator functiilor din program, ce vor avea pe prima pozitie a valorilor
+clasa din care face parte (ce imi va fi de ajutor la gasitul functiilor dintr-o
+anumita clasa. Initializarea programului este asemanatoare celei de la punctul
+a), diferenta fiind ca, pentru clase, voi initializa cu [["Global", "Global"]],
+semnificand ca, la initializarea oricarui program exista clasa "Global", cu
+parintele "Global". De asemenea, pentru valorile cheii "Cls", am pe prima
+pozitie din lista clasa parinte si numele clasei propriu-zise, ce ma va ajuta
+la obtinerea parintelui si la lantul de mosteniri de la c).
+
+Pentru obtinerea variabilelor intorc doar valoarea din mapare, la cea pentru
+obtinerea claselor, voi lua doar cel de-al doilea element din fiecare lista
+de string-uri obtinuta prin accesarea valorilor cheii "Cls", iar pentru
+obtinerea functiilor ma folosesc de list comprehension pentru a parcurge toate
+valorile cheii "Func", dar selectarea doar acelora ce au ca prim element un
+nume identic cu numele clasei (deci apartin acelei clase, prin modul in care
+maparea a fost construita). Pentru obtinerea clasei parinte a unei clase
+folosesc o strategie asemanatoare, numai ca de data aceasta caut numele clasei
+in lista acestora, returnand head-ul listei ce va contine parintii aferenti
+(probabil o implementare putin ineficienta, intrucat prin modul in care
+introduc elemente nu voi avea cum sa am doi parinti).
+
+Intrucat implementarea functiei interpret va fi pur parsare de string-uri, iar
+la parse am hotarat ca este cel mai facil sa folosesc direct functia lines, am
+ales sa definesc Instruction ca String, urmand ca, apeland functia parse sa
+obtin o lista de String-uri. Functia auxiliara "lowerString" ia ca parametru un
+String si intoarce String-ul cu toate caracterele lower_case(se aplica functia
+toLower caracter cu caracter, utilizand list comprehension).
+
+Functia "interpret" este formata din mai multe garzi, astfel: daca, aplicand
+functia "words" pe instructiune, lungimea acesteia este 0, intorc programul
+initial (probabil, va fi o linie goala). Daca primul cuvant va fi "class",
+instructiunea formata din 4 cuvinte (deci va fi extinsa o clasa), ultimul dintre
+ele este o clasa valida (deci `elem` classes), iar numele clasei nu este deja
+o clasa, o voi adauga in mapare, cu cheia "Cls", avand numele clasei si cel
+al parintelui corespunzator. Daca nu se va intra pe aceasta ramura, caut daca
+nu cumva este o definire a unei clase ce nu extinde nimic, caz in care se va
+considera ca parintele este "Global".
+
+Cazul in care apare o variabila este tratat prin functia "splitOneOf", ce ma
+ajuta sa impart in tokeni instructiunea, putand scapa si de caracterul "=".
+Astfel, verificarea validitatii unei variabile este facuta prin verificarea
+existentei clasei din care ar trebui sa faca parte (folosesc last pentru a fi
+sigur ca este ultimul token din String-ul parsat). Pentru functii, am nevoie
+sa fac split dupa mai multe caractere, adica " :(),", iar, pentru a scapa de
+tokenii ce sunt doar o lista goala, ma folosesc de functia "filter", astfel
+ca pentru a tokeniza String-ul aplic filter (not.null) pe instructiunea deja
+impartita. Pe langa verificarea existentei clasei, ca pana acum, am nevoie sa
+si verific parametrii functiei, folosind functia auxiliara "checkParameters",
+ce intoarce un Bool. Astfel, ma asigur, recursiv, ca fiecare parametru face
+parte dintr-o clasa valida.
+
+In orice alt caz (adica nu s-a ajuns pe o garda valida), voi intoarce programul
+fara vreo modificare facuta. Mentionez ca folosesc functia (!!), pentru a obtine
+elementul de la index-ul dorit dintr-o lista.
+
+----- (C) -----
+
+Pentru functia "infer", ma folosesc de pattern-matching pentru a trata fie
+cazul in care primul parametru este o variabila, fie un FCall. In cazul in care
+este o variabila, verific daca acea variabila face parte din lista de variabile,
+caz in care intorc tipul acesteia (ma folosesc de o functie auxiliara. ce cauta
+prin lista variabilelor din program si intoarce tipul, daca identifica
+variabila), in caz contrar intorcand Nothing.
+
+Pentru un FCall, tratez doua situatii, cea in care simbolul functiei este o
+functie valida din lista de functii a clasei din care face parte, fie cel
+in care este o functie valida din lista de functii a clasei parinte, alegand
+o abordare asemanatoare. Astfel, daca oricare din situatii este valida, ma
+folosesc de functia auxiliara "recursiveCheck", ce ajuta la verificarea
+recursiva a expresiilor din arbore, astfel ca, daca functia "infer" aplicata
+tuturor expresiilor din lista de expresii intoarce ceva diferit de "Nothing"
+(deci suntem intr-o situatie valida), atunci se va cauta mai departe, sau, in
+cazul de baza in care am o singura expresie ramasa in lista, se va intoarce fix
+rezultatul aplicarii functiei "infer".
+
+Definitiile de la where-ul functiei "infer" cred ca sunt destul de clare, astfel
+ca funcs si parent_funcs sunt folosite pentru intoarcerea functiilor caracteristice
+unei variabile (cu map head pentru a intoarce doar numele functiilor), var_type
+e folosit pentru determinarea tipului unei variabile, func_types si, analog,
+parent_types sunt folosite pentru obtinerea tipurilor functiilor obtinute, in
+modul descris anterior. Func_index si parent_index sunt folosite pentru a vedea
+ce index are functia cautata in lista de functii, iar return_type (si
+return_type_parent, in functie de garda pe care ne aflam) reprezinta elementul
+cu indexul aflat mai devreme din lista de tipuri de functii, pentru a stii ce
+anume sa intorc din functia "infer", in cazul in care nu esueaza inferenta de
+tip, si se va intoarce "Nothing".
+
+Abordarea mea nu trateaza chiar toate cazurile, si nici nu urca complet in lantul
+de mosteniri, de aceea netrecand toate testele corespunzatoare acestui punct.
+
+Mentiune: intrucat nu reuseam sa fac "import Data.List.Split", am luat de pe
+site-ul Haskell modulul "Data.List.Split.Internals", ce l-am copiat in fisierul
+"Split.hs", folosit pentru functia "splitOneOf", folosita la b). Este copiata
+integral, fara modificari, si cu licenta originala, avand drepturile asupra
+documentului.

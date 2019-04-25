@@ -1,3 +1,7 @@
+-------------------------------------------------
+-- Diaconescu Florin, 322CB, florin.diaconescu --
+-------------------------------------------------
+
 module Parser
 where
 
@@ -19,22 +23,19 @@ initEmptyProgram :: Program
 initEmptyProgram = Program (Map.insert "Var" [] (Map.insert "Cls" [["Global", "Global"]] (Map.insert "Func" [] Map.empty)))
 
 getVars :: Program -> [[String]]
-getVars (Program prog) = Map.findWithDefault [[]] "Var" prog
-
-getEverySnd :: [[String]] -> [String]
-getEverySnd strlst = [x2 | x1:x2:xs <- strlst]
+getVars (Program prog) = Map.findWithDefault [] "Var" prog
 
 getClasses :: Program -> [String]
-getClasses (Program prog) = getEverySnd listClasses
-    where listClasses = Map.findWithDefault [[]] "Cls" prog
+getClasses (Program prog) = map (!!1) listClasses
+    where listClasses = Map.findWithDefault [] "Cls" prog
 
 getParentClass :: String -> Program -> String
 getParentClass clsname (Program prog) = head [x1 | x1:x2:xs <- listClasses, x2 == clsname]
-    where listClasses = Map.findWithDefault [[]] "Cls" prog
+    where listClasses = Map.findWithDefault [] "Cls" prog
 
 getFuncsForClass :: String -> Program -> [[String]]
 getFuncsForClass clsname (Program prog) = [xs | x1:xs <- listClasses, x1 == clsname]
-    where listClasses = Map.findWithDefault [[]] "Func" prog
+    where listClasses = Map.findWithDefault [] "Func" prog
 
 -- Instruction poate fi ce considerați voi
 type Instruction = String
@@ -82,6 +83,7 @@ getTypeOfVar :: String -> Program -> String
 getTypeOfVar var (Program pr) = head [var_type | [var_name, var_type] <- getVars(Program pr), var_name == var]
 
 recursiveCheck :: [Expr] -> Program -> Maybe String
+recursiveCheck [] _ = Nothing
 recursiveCheck (expr:[]) (Program pr) = infer expr (Program pr)
 recursiveCheck (expr:rest) (Program pr)
     | ((infer expr (Program pr)) /= Nothing) = recursiveCheck rest (Program pr) 
@@ -94,8 +96,10 @@ infer (Va var) (Program pr)
     where vars = map head (getVars (Program pr))
 
 infer (FCall var_sym func_sym nest_expr) (Program pr)
-    | (func_sym `elem` funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing) then Just return_type else Nothing
-    | (func_sym `elem` parent_funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing) then Just return_type_parent else Nothing
+    | (func_sym `elem` funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing)
+        then Just return_type else Nothing
+    | (func_sym `elem` parent_funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing)
+        then Just return_type_parent else Nothing
     | otherwise = Nothing
     where funcs = map head (getFuncsForClass var_type (Program pr))
           var_type = getTypeOfVar var_sym (Program pr)
