@@ -10,6 +10,7 @@ import qualified Data.Map as Map
 
 import Data.Char
 import Split
+import Data.List
 
 -- Definire Program
 data Program = Program (Map String [[String]]) deriving Show
@@ -77,5 +78,26 @@ interpret instr (Program pr)
         where fltStr = filter (not.null) (splitOneOf " :()," instr)
               classes = getClasses (Program pr)
 
+getTypeOfVar :: String -> Program -> String
+getTypeOfVar var (Program pr) = head [var_type | [var_name, var_type] <- getVars(Program pr), var_name == var]
+
+recursiveCheck :: [Expr] -> Program -> Maybe String
+recursiveCheck (expr:[]) (Program pr) = infer expr (Program pr)
+recursiveCheck (expr:rest) (Program pr)
+    | ((infer expr (Program pr)) /= Nothing) = recursiveCheck rest (Program pr) 
+    | otherwise = Nothing
+
 infer :: Expr -> Program -> Maybe String
-infer _ _ = Nothing
+infer (Va var) (Program pr)
+    | (var `elem` vars) = Just (getTypeOfVar var (Program pr)) 
+    | otherwise = Nothing
+    where vars = map head (getVars (Program pr))
+
+infer (FCall var_sym func_sym nest_expr) (Program pr)
+    | (func_sym `elem` funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing) then Just return_type else Nothing
+    | otherwise = Nothing
+    where funcs = map head (getFuncsForClass var_type (Program pr))
+          var_type = getTypeOfVar var_sym (Program pr)
+          func_types = map (!!1) (getFuncsForClass var_type (Program pr))
+          func_index = elemIndex func_sym funcs
+          return_type = func_types!!(fromMaybe 0 func_index)
