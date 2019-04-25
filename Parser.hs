@@ -95,9 +95,14 @@ infer (Va var) (Program pr)
 
 infer (FCall var_sym func_sym nest_expr) (Program pr)
     | (func_sym `elem` funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing) then Just return_type else Nothing
+    | (func_sym `elem` parent_funcs) = if ((recursiveCheck nest_expr (Program pr)) /= Nothing) then Just return_type_parent else Nothing
     | otherwise = Nothing
     where funcs = map head (getFuncsForClass var_type (Program pr))
           var_type = getTypeOfVar var_sym (Program pr)
           func_types = map (!!1) (getFuncsForClass var_type (Program pr))
           func_index = elemIndex func_sym funcs
           return_type = func_types!!(fromMaybe 0 func_index)
+          parent_funcs = map head (getFuncsForClass (getParentClass var_type (Program pr))(Program pr))
+          parent_types = map (!!1) (getFuncsForClass (getParentClass var_type (Program pr))(Program pr))
+          parent_index = elemIndex func_sym parent_types
+          return_type_parent = parent_types!!(fromMaybe 0 parent_index)
